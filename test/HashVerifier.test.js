@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { generateProof } = require("../src/utils");
+const { generateProof, getUsernameHash } = require("../src/utils");
 
 describe("HashVerifier", function () {
   let vault;
@@ -55,26 +55,24 @@ describe("HashVerifier", function () {
 
     beforeEach(async function () {
       // Generate proofs for both users (only needed for payment tests)
-      aliceProof = await generateProof(testUsername, testPassword, testNonce);
-      bobProof = await generateProof(testUsername2, testPassword, testNonce);
+      // aliceProof = await generateProof(testUsername, testPassword, testNonce);
+      // bobProof = await generateProof(testUsername2, testPassword, testNonce);
 
       // Store username hashes
-      aliceUsernameHash = aliceProof.publicSignals[0];
-      bobUsernameHash = bobProof.publicSignals[0];
 
-      // Format proof data for payment tests
-      const aliceFormatted = {
-        pi_a: aliceProof.proof.pi_a.slice(0, 2),
-        pi_b: [
-          [aliceProof.proof.pi_b[0][1], aliceProof.proof.pi_b[0][0]],
-          [aliceProof.proof.pi_b[1][1], aliceProof.proof.pi_b[1][0]]
-        ],
-        pi_c: aliceProof.proof.pi_c.slice(0, 2)
-      };
-      aliceProof = {
-        ...aliceFormatted,
-        publicSignals: aliceProof.publicSignals
-      };
+      aliceUsernameHash = getUsernameHash(testUsername)
+      bobUsernameHash = getUsernameHash(testUsername2)
+
+      // // Format proof data for payment tests
+      // const aliceFormatted = {
+      //   pi_a: aliceProof.proof.pi_a,
+      //   pi_b: aliceProof.proof.pi_b,
+      //   pi_c: aliceProof.proof.pi_c
+      // };
+      // aliceProof = {
+      //   ...aliceFormatted,
+      //   publicSignals: aliceProof.publicSignals
+      // };
 
       // Approve USDC spending
       await mockUSDC.connect(user).approve(vault.getAddress(), depositAmount);

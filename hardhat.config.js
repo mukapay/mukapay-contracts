@@ -1,5 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
+require('@nomicfoundation/hardhat-viem')
 
 // Check if PRIVATE_KEY is set in .env
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
@@ -27,5 +28,13 @@ module.exports = {
         },
       },
     },
+  },
+  etherscan: {
+    apiKey: {
+      baseSepolia: "2RTIWU4VFRGX8EYBBDVUM65DAWMKKPGTFT",
+    },
+  },
+  sourcify: {
+    enabled: true,
   },
 };
