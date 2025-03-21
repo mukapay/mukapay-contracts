@@ -37,7 +37,7 @@ contract HashVerifier {
         require(resultHashes[usernameHash] != 0, "Username not registered");
         
         // Verify the proof
-        uint256[] memory publicInputs = new uint256[](3);
+        uint256[3] memory publicInputs;  // Changed to fixed-size array
         publicInputs[0] = usernameHash;
         publicInputs[1] = nonce;
         publicInputs[2] = resultHashes[usernameHash];
@@ -57,6 +57,6 @@ interface IVerifier {
         uint256[2] memory a,
         uint256[2][2] memory b,
         uint256[2] memory c,
-        uint256[] memory input
+        uint256[3] memory input
     ) external view returns (bool);
 } 
