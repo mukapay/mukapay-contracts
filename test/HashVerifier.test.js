@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const { generateProof } = require("../src/utils");
 
 describe("HashVerifier", function () {
-  let hashVerifier;
+  let vault;
   let verifier;
   let mockUSDC;
   let owner;
@@ -32,10 +32,10 @@ describe("HashVerifier", function () {
     verifier = await Verifier.deploy();
     await verifier.waitForDeployment();
 
-    // Deploy HashVerifier with the Verifier address and MockUSDC address
-    const HashVerifier = await ethers.getContractFactory("HashVerifier");
-    hashVerifier = await HashVerifier.deploy(await verifier.getAddress(), await mockUSDC.getAddress());
-    await hashVerifier.waitForDeployment();
+    // Deploy Vault with the Verifier address and MockUSDC address
+    const Vault = await ethers.getContractFactory("Vault");
+    vault = await Vault.deploy(await verifier.getAddress(), await mockUSDC.getAddress());
+    await vault.waitForDeployment();
 
     // Mint some USDC to user
     await mockUSDC.mint(user.address, depositAmount);
@@ -44,8 +44,8 @@ describe("HashVerifier", function () {
 
   describe("Deployment", function () {
     it("Should set the correct verifier and USDC addresses", async function () {
-      expect(await hashVerifier.verifier()).to.equal(await verifier.getAddress());
-      expect(await hashVerifier.usdc()).to.equal(await mockUSDC.getAddress());
+      expect(await vault.verifier()).to.equal(await verifier.getAddress());
+      expect(await vault.usdc()).to.equal(await mockUSDC.getAddress());
     });
   });
 
@@ -77,42 +77,42 @@ describe("HashVerifier", function () {
       };
 
       // Approve USDC spending
-      await mockUSDC.connect(user).approve(hashVerifier.getAddress(), depositAmount);
-      await mockUSDC.connect(user2).approve(hashVerifier.getAddress(), depositAmount);
+      await mockUSDC.connect(user).approve(vault.getAddress(), depositAmount);
+      await mockUSDC.connect(user2).approve(vault.getAddress(), depositAmount);
     });
 
     it("Should allow depositing USDC", async function () {
-      await expect(hashVerifier.connect(user).deposit(aliceUsernameHash, depositAmount))
-        .to.emit(hashVerifier, "Deposited")
+      await expect(vault.connect(user).deposit(aliceUsernameHash, depositAmount))
+        .to.emit(vault, "Deposited")
         .withArgs(aliceUsernameHash, depositAmount);
 
-      expect(await hashVerifier.balances(aliceUsernameHash)).to.equal(depositAmount);
+      expect(await vault.balances(aliceUsernameHash)).to.equal(depositAmount);
     });
 
     it("Should not allow depositing zero amount", async function () {
       await expect(
-        hashVerifier.connect(user).deposit(aliceUsernameHash, 0)
+        vault.connect(user).deposit(aliceUsernameHash, 0)
       ).to.be.revertedWith("Amount must be greater than 0");
     });
 
     it("Should not allow depositing to zero username hash", async function () {
       await expect(
-        hashVerifier.connect(user).deposit(0, depositAmount)
+        vault.connect(user).deposit(0, depositAmount)
       ).to.be.revertedWith("Invalid username hash");
     });
 
     it("Should fail deposit if USDC transfer fails", async function () {
       // Remove approval
-      await mockUSDC.connect(user).approve(hashVerifier.getAddress(), 0);
+      await mockUSDC.connect(user).approve(vault.getAddress(), 0);
       
       await expect(
-        hashVerifier.connect(user).deposit(aliceUsernameHash, depositAmount)
+        vault.connect(user).deposit(aliceUsernameHash, depositAmount)
       ).to.be.reverted; // OpenZeppelin IERC20 uses custom errors
     });
 
     it("Should allow paying USDC between users", async function () {
       // First deposit
-      await hashVerifier.connect(user).deposit(aliceUsernameHash, depositAmount);
+      await vault.connect(user).deposit(aliceUsernameHash, depositAmount);
 
       // Generate new proof for payment (need new nonce)
       const paymentProof = await generateProof(testUsername, testPassword, "9876543210");
@@ -127,7 +127,7 @@ describe("HashVerifier", function () {
 
       // Then pay
       await expect(
-        hashVerifier.connect(user).pay(
+        vault.connect(user).pay(
           paymentFormatted.pi_a,
           paymentFormatted.pi_b,
           paymentFormatted.pi_c,
@@ -138,11 +138,11 @@ describe("HashVerifier", function () {
           payAmount
         )
       )
-        .to.emit(hashVerifier, "Paid")
+        .to.emit(vault, "Paid")
         .withArgs(aliceUsernameHash, bobUsernameHash, payAmount);
 
-      expect(await hashVerifier.balances(aliceUsernameHash)).to.equal(depositAmount - payAmount);
-      expect(await hashVerifier.balances(bobUsernameHash)).to.equal(payAmount);
+      expect(await vault.balances(aliceUsernameHash)).to.equal(depositAmount - payAmount);
+      expect(await vault.balances(bobUsernameHash)).to.equal(payAmount);
     });
 
     it("Should not allow payment without sufficient balance", async function () {
@@ -157,7 +157,7 @@ describe("HashVerifier", function () {
       };
 
       await expect(
-        hashVerifier.connect(user).pay(
+        vault.connect(user).pay(
           paymentFormatted.pi_a,
           paymentFormatted.pi_b,
           paymentFormatted.pi_c,
@@ -172,7 +172,7 @@ describe("HashVerifier", function () {
 
     it("Should not allow using the same nonce twice", async function () {
       // First deposit
-      await hashVerifier.connect(user).deposit(aliceUsernameHash, depositAmount);
+      await vault.connect(user).deposit(aliceUsernameHash, depositAmount);
 
       // Generate payment proof
       const paymentProof = await generateProof(testUsername, testPassword, testNonce);
@@ -186,7 +186,7 @@ describe("HashVerifier", function () {
       };
 
       // First payment succeeds
-      await hashVerifier.connect(user).pay(
+      await vault.connect(user).pay(
         paymentFormatted.pi_a,
         paymentFormatted.pi_b,
         paymentFormatted.pi_c,
@@ -199,7 +199,7 @@ describe("HashVerifier", function () {
 
       // Second payment with same nonce fails
       await expect(
-        hashVerifier.connect(user).pay(
+        vault.connect(user).pay(
           paymentFormatted.pi_a,
           paymentFormatted.pi_b,
           paymentFormatted.pi_c,

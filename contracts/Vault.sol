@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract HashVerifier {
+contract Vault {
     // Mapping to track used nonces for each username hash
     mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
     
