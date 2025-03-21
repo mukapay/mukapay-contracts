@@ -79,9 +79,24 @@ async function generateCalldata(proof, publicSignals) {
     }
 }
 
+async function getUsernameHash(username) {
+    // Initialize Poseidon
+    const poseidon = await circomlibjs.buildPoseidon();
+
+    // Convert username to field element
+    const usernameField = strToField(username);
+
+    // Generate Poseidon hash
+    const usernameHash = poseidon([usernameField]);
+
+    // Return the hash as a string
+    return poseidon.F.toString(usernameHash);
+}
+
 module.exports = {
     generateProof,
     verifyProof,
     strToField,
-    generateCalldata
+    generateCalldata,
+    getUsernameHash
 }; 
