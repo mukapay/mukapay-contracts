@@ -58,13 +58,16 @@ async function deposit(username, amount) {
     const usernameHash = await getUsernameHash(username)
     console.log("Username hash:", usernameHash)
     // First approve USDC spending
-
+    const nonce = await client.getTransactionCount({
+        address: signer.address
+    })
     const approveHash = await walletClient.writeContract({
         address: mockUSDC.address,
         abi: mockUSDC.abi,
         functionName: 'approve',
         args: [vault.address, amount],
-        account: signer
+        account: signer,
+        nonce: nonce
     })
 
     console.log("Approve hash:", approveHash)
@@ -75,6 +78,7 @@ async function deposit(username, amount) {
         functionName: 'deposit',
         args: [usernameHash, amount],
         account: signer,
+        nonce: nonce + 1
     })
 
     console.log("Deposit hash:", depositHash)
@@ -112,7 +116,7 @@ async function main() {
     // const hash = await sendEth(depositor.address, amount)
     // console.log("Hash:", hash)
     // console.log(await vaultBalanceOf("bukamuka"))
-    // await deposit("bukamuka", 100_000_000n)
+    await deposit("bukamuka", 100_000_000n)
     // console.log(await vaultBalanceOf("bukamuka"))
 
 }
