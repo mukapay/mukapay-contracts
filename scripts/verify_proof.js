@@ -5,12 +5,12 @@ async function main() {
     try {
         // Read the proof and public signals from proof.json
         const { proof, publicSignals } = JSON.parse(
-            fs.readFileSync("build/proofs/proof.json", "utf8")
+            fs.readFileSync("circuits/proof.json", "utf8")
         );
 
         // Read the verification key
         const verificationKey = JSON.parse(
-            fs.readFileSync("build/keys/verification_key.json", "utf8")
+            fs.readFileSync("circuits/verification_key.json", "utf8")
         );
 
         // Verify the proof using the imported verifyProof function

@@ -6,10 +6,11 @@
 # npm install -g snarkjs
 
 # # Compile the circuit
-# echo "Compiling circuit..."
-# circom circuit.circom --r1cs --wasm
+echo "Compiling circuit..."
+cd circuits
+circom circuit.circom --r1cs --wasm
 
-# Generate Powers of Tau
+Generate Powers of Tau
 echo "Generating Powers of Tau..."
 snarkjs powersoftau new bn128 12 pot12_0000.ptau -v
 snarkjs powersoftau contribute pot12_0000.ptau pot12_0001.ptau --name="First contribution" -v
@@ -26,15 +27,8 @@ snarkjs zkey export verificationkey circuit_final.zkey verification_key.json
 
 # Generate Solidity verifier
 echo "Generating Solidity verifier..."
-snarkjs zkey export solidityverifier circuit_final.zkey verifier.sol
+snarkjs zkey export solidityverifier circuit_final.zkey ../contracts/verifier.sol
 
 # Clean up temporary files
 echo "Cleaning up temporary files..."
 rm pot12_0000.ptau pot12_0001.ptau circuit_0000.zkey
-
-echo "Done! Generated files:"
-echo "- circuit.r1cs (Constraint system)"
-echo "- circuit_js/circuit.wasm (Wasm file for witness generation)"
-echo "- circuit_final.zkey (Proving key)"
-echo "- verification_key.json (Verification key)"
-echo "- verifier.sol (Solidity verifier contract)" 

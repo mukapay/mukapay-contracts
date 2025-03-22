@@ -11,6 +11,15 @@ function strToField(str) {
     return result;
 }
 
+// Generate credential hash for a username and password
+async function generateCredentialHash(username, password) {
+    const poseidon = await circomlibjs.buildPoseidon();
+    const usernameField = strToField(username);
+    const passwordField = strToField(password);
+    const credentialHash = poseidon([usernameField, passwordField]);
+    return poseidon.F.toString(credentialHash);
+}
+
 // Generate proof with actual inputs
 async function generateProof(username, password, nonce = Date.now()) {
     // Initialize Poseidon
@@ -22,21 +31,26 @@ async function generateProof(username, password, nonce = Date.now()) {
 
     // Generate Poseidon hashes
     const usernameHash = poseidon([usernameField]);
-    const passwordHash = poseidon([passwordField]);
+    const credentialHash = poseidon([usernameField, passwordField]);
+
+    // Create final hash with credential hash and nonce
+    const finalHash = poseidon([credentialHash, BigInt(nonce)]);
 
     // Create input for the circuit
     const input = {
-        password_hash: poseidon.F.toString(passwordHash),
+        username: usernameField.toString(),
+        password: passwordField.toString(),
         username_hash: poseidon.F.toString(usernameHash),
+        credential_hash: poseidon.F.toString(credentialHash),
         nonce: nonce.toString(),
-        result_hash: poseidon.F.toString(poseidon([passwordHash, usernameHash, BigInt(nonce)]))
+        result_hash: poseidon.F.toString(finalHash)
     };
 
     // Generate the proof
     const { proof, publicSignals } = await snarkjs.groth16.fullProve(
         input,
-        "build/circuit_js/circuit.wasm",
-        "build/keys/circuit_final.zkey"
+        "circuits/circuit_js/circuit.wasm",
+        "circuits/circuit_final.zkey"
     );
 
     return { 
@@ -44,9 +58,7 @@ async function generateProof(username, password, nonce = Date.now()) {
         publicSignals,
         input,
     };
-
 }
-
 
 // Verify a zero-knowledge proof
 async function verifyProof(proof, publicSignals, verificationKey) {
@@ -98,5 +110,6 @@ module.exports = {
     verifyProof,
     strToField,
     generateCalldata,
-    getUsernameHash
+    getUsernameHash,
+    generateCredentialHash
 }; 

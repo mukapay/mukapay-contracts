@@ -1,13 +1,14 @@
+require("dotenv").config();
 const hre = require("hardhat");
 
 async function main() {
   console.log("Deploying contracts...");
 
-  // Deploy MockUSDC first
-  const MockUSDC = await hre.ethers.getContractFactory("MockUSDC");
-  const mockUSDC = await MockUSDC.deploy();
-  await mockUSDC.waitForDeployment();
-  console.log(`MockUSDC deployed to: ${await mockUSDC.getAddress()}`);
+  // // Deploy MockUSDC first
+  // const MockUSDC = await hre.ethers.getContractFactory("MockUSDC");
+  // const mockUSDC = await MockUSDC.deploy();
+  // await mockUSDC.waitForDeployment();
+  // console.log(`MockUSDC deployed to: ${await mockUSDC.getAddress()}`);
 
   // Deploy the Verifier contract
   const Verifier = await hre.ethers.getContractFactory("Groth16Verifier");
@@ -17,13 +18,13 @@ async function main() {
 
   // Deploy Vault with the Verifier and MockUSDC addresses
   const Vault = await hre.ethers.getContractFactory("Vault");
-  const vault = await Vault.deploy(await verifier.getAddress(), await mockUSDC.getAddress());
+  const vault = await Vault.deploy(await verifier.getAddress(), process.env.USDC_ADDRESS);
   await vault.waitForDeployment();
   console.log(`Vault deployed to: ${await vault.getAddress()}`);
 
   console.log("\nDeployment complete! Contract addresses:");
   console.log("----------------------------------------");
-  console.log(`MockUSDC: ${await mockUSDC.getAddress()}`);
+  console.log(`USDC: ${process.env.USDC_ADDRESS}`);
   console.log(`Verifier: ${await verifier.getAddress()}`);
   console.log(`Vault: ${await vault.getAddress()}`);
 }

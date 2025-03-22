@@ -1,53 +1,48 @@
-const snarkjs = require("snarkjs");
-const crypto = require("crypto");
-const circomlibjs = require("circomlibjs");
 const fs = require("fs");
-const { generateProof } = require("../src/utils");
-
-// Generate Poseidon hash using snarkjs
-async function poseidonHash(inputs) {
-    const poseidon = await circomlibjs.buildPoseidon();
-    return poseidon.F.toString(poseidon(inputs));
-}
+const { generateProof, generateCredentialHash } = require("../src/utils");
 
 // Example usage of the imported generateProof function
 async function main() {
     // Example values
     const username = "alice";
-    const password = "password123";
+    const correctPassword = "password123";
     
     try {
-        const { proof, publicSignals, input } = await generateProof(username, password);
-        
-        console.log("Input:", input);
-        console.log("Proof generated successfully!");
-        console.log("Public signals:", publicSignals);
-        console.log("Proof:", proof);
+        // First, simulate registration by generating and storing credential hash
+        console.log("\n=== User Registration Simulation ===");
+        const storedCredentialHash = await generateCredentialHash(username, correctPassword);
+        console.log("Stored credential hash:", storedCredentialHash);
 
-        // Save proof to file
+        // Generate proof with correct password
+        console.log("\n=== Authentication with Correct Password ===");
+        const correctAttempt = await generateProof(username, correctPassword);
+        
+        console.log("Input used:", correctAttempt.input);
+        console.log("Generated credential hash matches stored hash:", 
+            correctAttempt.input.credential_hash === storedCredentialHash);
+        console.log("Proof generated successfully!");
+
+        // Save successful proof to file
         fs.writeFileSync(
-            "build/proofs/proof.json",
-            JSON.stringify({ proof, publicSignals }, null, 2)
+            "circuits/proof.json",
+            JSON.stringify({
+                proof: correctAttempt.proof,
+                publicSignals: correctAttempt.publicSignals,
+                storedCredentialHash
+            }, null, 2)
         );
 
-        return { proof, publicSignals };
+        return {
+            proof: correctAttempt.proof,
+            publicSignals: correctAttempt.publicSignals,
+            storedCredentialHash
+        };
     } catch (error) {
         console.error("Error generating proof:", error);
         throw error;
     }
 }
 
-// If we're running this script directly
-if (require.main === module) {
-    main().then(() => {
-        process.exit(0);
-    }).catch((err) => {
-        console.error(err);
-        process.exit(1);
-    });
-}
-
-module.exports = {
-    main,
-    poseidonHash
-}; 
+main().catch(console.error).then(() => {
+    process.exit(0);
+});

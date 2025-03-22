@@ -1,24 +1,36 @@
 pragma circom 2.0.0;
 
-include "node_modules/circomlib/circuits/poseidon.circom";
+include "../node_modules/circomlib/circuits/poseidon.circom";
 
 template HashVerification() {
-    // Private input: password hash (Poseidon hash)
-    signal input password_hash;
+    // Private inputs
+    signal input password;  // Now we take the actual password, not its hash
+    signal input username;
     
     // Public inputs
-    signal input username_hash; // Poseidon hash of username
-    signal input nonce;        // Nonce to prevent replay attacks
-    signal input result_hash;  // Expected hash result
+    signal input username_hash;    // Poseidon hash of username
+    signal input credential_hash;  // Stored hash of username+password
+    signal input nonce;           // Nonce to prevent replay attacks
+    signal input result_hash;     // Expected hash result
     
-    // Hash the password_hash, username_hash, and nonce together using Poseidon
-    component poseidon = Poseidon(3);
-    poseidon.inputs[0] <== password_hash;
-    poseidon.inputs[1] <== username_hash;
-    poseidon.inputs[2] <== nonce;
+    // First verify that username_hash matches the hash of provided username
+    component usernameHasher = Poseidon(1);
+    usernameHasher.inputs[0] <== username;
+    usernameHasher.out === username_hash;
     
-    // Verify the hash matches the expected result
-    poseidon.out === result_hash;
+    // Create and verify credential hash (username + password)
+    component credentialHasher = Poseidon(2);
+    credentialHasher.inputs[0] <== username;
+    credentialHasher.inputs[1] <== password;
+    credentialHasher.out === credential_hash;  // Verify against stored credential hash
+    
+    // Hash the credential_hash with nonce for the final verification
+    component finalHasher = Poseidon(2);
+    finalHasher.inputs[0] <== credential_hash;
+    finalHasher.inputs[1] <== nonce;
+    
+    // Verify the final hash matches the expected result
+    finalHasher.out === result_hash;
 }
 
-component main { public [username_hash, nonce, result_hash] } = HashVerification(); 
+component main { public [username_hash, credential_hash, nonce, result_hash] } = HashVerification(); 
