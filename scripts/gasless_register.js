@@ -4,6 +4,7 @@ const { baseSepolia } = require('viem/chains')
 const { generatePrivateKey } = require('viem/accounts')
 const { getUsernameHash, generateProof, generateCredentialHash } = require('../src/utils')
 const { createBundlerClient, toCoinbaseSmartAccount } = require('viem/account-abstraction')
+const { readContract } = require('viem/actions')
 
 // Creates a Coinbase smart wallet using an EOA signer
 const registrant = generatePrivateKey()
@@ -12,8 +13,8 @@ console.log({
 })
 
 const vault = {
-    address: process.env.VAULT_V2_ADDRESS,
-    abi: require('../artifacts/contracts/VaultV2.sol/VaultV2.json').abi,
+    address: process.env.VAULT_ADDRESS,
+    abi: require('../artifacts/contracts/Vault.sol/Vault.json').abi,
 }
 
 let account = null
@@ -59,7 +60,12 @@ async function register(username, password) {
     
     console.log("Username hash:", usernameHash)
     console.log("Credential hash:", credentialHash)
-
+    console.log(JSON.stringify({
+        proof,
+        usernameHash,
+        credentialHash
+    }))
+return
     // Format proof for contract call
     const formattedProof = {
         pi_a: proof.proof.pi_a.slice(0, 2),
@@ -127,9 +133,21 @@ async function register(username, password) {
     }
 }
 
+async function getCredentialHash(username) {
+    const usernameHash = await getUsernameHash(username)
+    const credentialHash = await client.readContract({
+        address: vault.address,
+        abi: vault.abi,
+        functionName: 'credentialHashes',
+        args: [usernameHash]
+    })
+    return credentialHash
+}
+
 async function main() {
     await init(registrant)
-    await register("test", "1234")
+    // await register("bukamuka", "mukakamu")
+    console.log(await getCredentialHash("bukamuka"))
 }
 
 main().catch(console.error) 

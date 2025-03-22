@@ -21,6 +21,7 @@ contract Vault {
     
     event Deposited(uint256 indexed usernameHash, uint256 amount);
     event Paid(uint256 indexed fromUsernameHash, uint256 indexed toUsernameHash, uint256 amount);
+    event Withdrawn(uint256 indexed fromUsernameHash, address indexed toUserAddress, uint256 amount);
     event Registered(uint256 indexed usernameHash, uint256 credentialHash);
     
     constructor(address _verifierAddress, address _usdcAddress) {
@@ -96,7 +97,6 @@ contract Vault {
     ) external {
         require(amount > 0, "Amount must be greater than 0");
         require(usernameHash != 0, "Invalid username hash");
-        require(credentialHashes[usernameHash] != 0, "User not registered");
         
         // Transfer USDC from sender to contract
         require(usdc.transferFrom(msg.sender, address(this), amount), "Transfer failed");
@@ -120,7 +120,6 @@ contract Vault {
         uint256 amount
     ) external returns (bool) {
         require(toUsernameHash != 0, "Invalid recipient");
-        require(credentialHashes[toUsernameHash] != 0, "Recipient not registered");
         
         // Verify ownership of the sending account
         require(verify(a, b, c, fromUsernameHash, credentialHash, nonce, resultHash), "Verification failed");
@@ -133,6 +132,35 @@ contract Vault {
         balances[toUsernameHash] += amount;
         
         emit Paid(fromUsernameHash, toUsernameHash, amount);
+        return true;
+    }
+
+    function withdraw(
+        uint256[2] memory a,
+        uint256[2][2] memory b,
+        uint256[2] memory c,
+        uint256 fromUsernameHash,
+        address toUserAddress,
+        uint256 credentialHash,
+        uint256 nonce,
+        uint256 resultHash,
+        uint256 amount
+    ) external returns (bool) {
+        require(credentialHashes[fromUsernameHash] != 0, "Sender not registered");
+        
+        // Verify ownership of the sending account
+        require(verify(a, b, c, fromUsernameHash, credentialHash, nonce, resultHash), "Verification failed");
+        
+        // Check sufficient balance
+        require(balances[fromUsernameHash] >= amount, "Insufficient balance");
+        
+        // Update balances
+        balances[fromUsernameHash] -= amount;
+
+        // Transfer USDC from contract to user
+        require(usdc.transfer(toUserAddress, amount), "Transfer failed");
+
+        emit Withdrawn(fromUsernameHash, toUserAddress, amount);
         return true;
     }
 }

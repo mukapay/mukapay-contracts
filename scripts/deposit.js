@@ -6,13 +6,11 @@ const { getUsernameHash } = require('../src/utils')
 const { createBundlerClient, toCoinbaseSmartAccount } = require('viem/account-abstraction')
 
 // Creates a Coinbase smart wallet using an EOA signer
-const deployer = privateKeyToAccount("0x" + process.env.PRIVATE_KEY)
-const depositor = privateKeyToAccount(process.env.DEPOSITOR_ADDRESS)
+const deployer = privateKeyToAccount(process.env.PRIVATE_KEY)
 const signer = deployer
-const rpc_url = process.env.FLASHBLOCK_URL
+const rpc_url = process.env.BASE_API_KEY
 console.log({
     deployer: deployer.address,
-    depositor: depositor.address,
 })
 
 const mockUSDC = {
@@ -46,6 +44,16 @@ async function mintUsdc(to, amount) {
     return hash
 }
 
+async function balance(address) {
+    const balance = await client.readContract({
+        address: mockUSDC.address,
+        abi: mockUSDC.abi,
+        functionName: 'balanceOf',
+        args: [address]
+    })
+    return balance
+}
+
 async function deposit(username, amount) {
     const usernameHash = await getUsernameHash(username)
     console.log("Username hash:", usernameHash)
@@ -66,7 +74,7 @@ async function deposit(username, amount) {
         abi: vault.abi,
         functionName: 'deposit',
         args: [usernameHash, amount],
-        account: signer
+        account: signer,
     })
 
     console.log("Deposit hash:", depositHash)
@@ -82,12 +90,31 @@ async function sendEth(to, amount) {
     return hash
 }
 
+async function vaultBalanceOf(username) {
+    const usernameHash = await getUsernameHash(username)
+    const balance = await client.readContract({
+        address: process.env.VAULT_ADDRESS,
+        functionName: 'balances',
+        abi: vault.abi,
+        args: [usernameHash]
+      })
+    return balance
+  
+  
+}
+
 async function main() {
+    // const hash = await mintUsdc(signer.address, 100_000_000n)
+    // console.log("Hash:", hash)
+    // console.log(await balance(signer.address))
     // const amount = parseEther("0.01")
     // console.log("Amount:", amount)
     // const hash = await sendEth(depositor.address, amount)
     // console.log("Hash:", hash)
-    // await deposit("bukamuka", 1_000_000n)
+    // console.log(await vaultBalanceOf("bukamuka"))
+    // await deposit("bukamuka", 100_000_000n)
+    // console.log(await vaultBalanceOf("bukamuka"))
+
 }
 
 main().catch(console.error)

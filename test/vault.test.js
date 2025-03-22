@@ -221,13 +221,13 @@ describe("HashVerifier", function () {
       expect(balance).to.equal(depositAmount);
     });
 
-    it("Should not allow depositing to unregistered user", async function () {
-      const unregisteredHash = await getUsernameHash("unregistered");
+    // it("Should not allow depositing to unregistered user", async function () {
+    //   const unregisteredHash = await getUsernameHash("unregistered");
 
-      await expect(
-        vault.write.deposit([unregisteredHash, depositAmount], { account: user.account })
-      ).to.be.rejectedWith(/User not registered/);
-    });
+    //   await expect(
+    //     vault.write.deposit([unregisteredHash, depositAmount], { account: user.account })
+    //   ).to.be.rejectedWith(/User not registered/);
+    // });
 
     it("Should allow paying USDC between registered users", async function () {
       // Approve and deposit first
@@ -281,6 +281,128 @@ describe("HashVerifier", function () {
 
       expect(aliceBalance).to.equal(depositAmount - payAmount);
       expect(bobBalance).to.equal(payAmount);
+    });
+
+    it("Should allow withdrawing USDC to user address", async function () {
+      // Approve and deposit first
+      const approveTx = await mockUSDC.write.approve([vault.address, depositAmount], { account: user.account });
+      await publicClient.waitForTransactionReceipt({ hash: approveTx });
+
+      const depositTx = await vault.write.deposit([aliceUsernameHash, depositAmount], { account: user.account });
+      await publicClient.waitForTransactionReceipt({ hash: depositTx });
+
+      // Generate new proof for withdrawal
+      const withdrawalProof = await generateProof(testUsername, testPassword, "9876543210");
+      const withdrawalFormatted = formatProof(withdrawalProof);
+
+      // Get initial USDC balance of user
+      const initialBalance = await mockUSDC.read.balanceOf([user.account.address]);
+
+      // Withdraw
+      const hash = await vault.write.withdraw(
+        [
+          withdrawalFormatted.pi_a,
+          withdrawalFormatted.pi_b,
+          withdrawalFormatted.pi_c,
+          aliceUsernameHash,
+          user.account.address,
+          aliceCredentialHash,
+          withdrawalProof.publicSignals[2],
+          withdrawalProof.publicSignals[3],
+          payAmount
+        ],
+        { account: user.account }
+      );
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      // Find and decode the Withdrawn event
+      const withdrawnEvent = receipt.logs.find(log => 
+        log.address.toLowerCase() === vault.address.toLowerCase()
+      );
+      
+      const decodedEvent = decodeEventLog({
+        abi: vault.abi,
+        data: withdrawnEvent.data,
+        topics: withdrawnEvent.topics
+      });
+
+      expect(decodedEvent.eventName).to.equal("Withdrawn");
+      expect(decodedEvent.args.fromUsernameHash).to.equal(aliceUsernameHash);
+      expect(decodedEvent.args.toUserAddress.toLowerCase()).to.equal(user.account.address.toLowerCase());
+      expect(decodedEvent.args.amount).to.equal(payAmount);
+
+      // Check vault balance
+      const vaultBalance = await vault.read.balances([aliceUsernameHash]);
+      expect(vaultBalance).to.equal(depositAmount - payAmount);
+
+      // Check user's USDC balance increased
+      const finalBalance = await mockUSDC.read.balanceOf([user.account.address]);
+      expect(finalBalance).to.equal(initialBalance + payAmount);
+    });
+
+    it("Should not allow withdrawing with invalid credentials", async function () {
+      // Approve and deposit first
+      const approveTx = await mockUSDC.write.approve([vault.address, depositAmount], { account: user.account });
+      await publicClient.waitForTransactionReceipt({ hash: approveTx });
+
+      const depositTx = await vault.write.deposit([aliceUsernameHash, depositAmount], { account: user.account });
+      await publicClient.waitForTransactionReceipt({ hash: depositTx });
+
+      // Generate proof with correct password (we'll use wrong credential hash)
+      const withdrawalProof = await generateProof(testUsername, testPassword, "9876543210");
+      const withdrawalFormatted = formatProof(withdrawalProof);
+
+      // Use a different credential hash
+      const wrongCredentialHash = await generateCredentialHash(testUsername, "wrong_password");
+
+      await expect(
+        vault.write.withdraw(
+          [
+            withdrawalFormatted.pi_a,
+            withdrawalFormatted.pi_b,
+            withdrawalFormatted.pi_c,
+            aliceUsernameHash,
+            user.account.address,
+            wrongCredentialHash,
+            withdrawalProof.publicSignals[2],
+            withdrawalProof.publicSignals[3],
+            payAmount
+          ],
+          { account: user.account }
+        )
+      ).to.be.rejectedWith(/Invalid credentials/);
+    });
+
+    it("Should not allow withdrawing more than balance", async function () {
+      // Approve and deposit first
+      const approveTx = await mockUSDC.write.approve([vault.address, depositAmount], { account: user.account });
+      await publicClient.waitForTransactionReceipt({ hash: approveTx });
+
+      const depositTx = await vault.write.deposit([aliceUsernameHash, depositAmount], { account: user.account });
+      await publicClient.waitForTransactionReceipt({ hash: depositTx });
+
+      // Generate proof for withdrawal
+      const withdrawalProof = await generateProof(testUsername, testPassword, "9876543210");
+      const withdrawalFormatted = formatProof(withdrawalProof);
+
+      const tooMuchAmount = depositAmount + 1n;
+
+      await expect(
+        vault.write.withdraw(
+          [
+            withdrawalFormatted.pi_a,
+            withdrawalFormatted.pi_b,
+            withdrawalFormatted.pi_c,
+            aliceUsernameHash,
+            user.account.address,
+            aliceCredentialHash,
+            withdrawalProof.publicSignals[2],
+            withdrawalProof.publicSignals[3],
+            tooMuchAmount
+          ],
+          { account: user.account }
+        )
+      ).to.be.rejectedWith(/Insufficient balance/);
     });
 
     it("Should not allow payment with wrong password", async function () {

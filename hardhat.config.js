@@ -18,6 +18,10 @@ if (!BASE_API_KEY) {
 module.exports = {
   solidity: "0.8.20",
   networks: {
+    "localhost": {
+      url: "http://127.0.0.1:8545",
+      // accounts: [PRIVATE_KEY],
+    },
     "base-sepolia": {
       url: BASE_API_KEY,
       accounts: [PRIVATE_KEY],
