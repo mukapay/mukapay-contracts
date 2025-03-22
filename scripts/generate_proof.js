@@ -1,42 +1,28 @@
 const fs = require("fs");
-const { generateProof, generateCredentialHash } = require("../src/utils");
+const { generateProof, generateCredentialHash, getUsernameHash } = require("../src/utils");
 
 // Example usage of the imported generateProof function
 async function main() {
     // Example values
-    const username = "alice";
-    const correctPassword = "password123";
+    const username = "bukamuka";
+    const correctPassword = "mukakamu";
+    const amount = 100_000_000n
+    const toUsername = "yongfeng"
     
     try {
-        // First, simulate registration by generating and storing credential hash
-        console.log("\n=== User Registration Simulation ===");
-        const storedCredentialHash = await generateCredentialHash(username, correctPassword);
-        console.log("Stored credential hash:", storedCredentialHash);
-
         // Generate proof with correct password
         console.log("\n=== Authentication with Correct Password ===");
-        const correctAttempt = await generateProof(username, correctPassword);
-        
-        console.log("Input used:", correctAttempt.input);
-        console.log("Generated credential hash matches stored hash:", 
-            correctAttempt.input.credential_hash === storedCredentialHash);
-        console.log("Proof generated successfully!");
-
+        const proof = await generateProof(username, correctPassword);
+        console.log(JSON.stringify({
+            proof,
+            toUsernameHash: await getUsernameHash(toUsername),
+            amount: amount.toString()
+        }))
         // Save successful proof to file
-        fs.writeFileSync(
-            "circuits/proof.json",
-            JSON.stringify({
-                proof: correctAttempt.proof,
-                publicSignals: correctAttempt.publicSignals,
-                storedCredentialHash
-            }, null, 2)
-        );
-
-        return {
-            proof: correctAttempt.proof,
-            publicSignals: correctAttempt.publicSignals,
-            storedCredentialHash
-        };
+        // fs.writeFileSync(
+        //     "circuits/proof.json",
+        //     JSON.stringify(correctAttempt)
+        // );
     } catch (error) {
         console.error("Error generating proof:", error);
         throw error;
