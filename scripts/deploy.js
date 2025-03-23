@@ -28,6 +28,16 @@ async function main() {
   console.log(`USDC: ${process.env.USDC_ADDRESS}`);
   console.log(`Verifier: ${process.env.VERIFIER_ADDRESS}`);
   console.log(`Vault: ${await vault.getAddress()}`);
+
+
+
+
+
+    // mainnet Deployment complete! Contract addresses:
+    // ----------------------------------------
+    // USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+    // Verifier: 0xF8420F6391047A4a86e540e103e5c69Af2096652
+    // Vault: 0xacC07577A4324cf6bC12A049B33Cf906c5567099
 }
 
 main()

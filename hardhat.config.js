@@ -32,6 +32,11 @@ module.exports = {
         },
       },
     },
+    "base": {
+      url: BASE_API_KEY,
+      accounts: [PRIVATE_KEY],
+      chainId: 8453,
+    }
   },
   etherscan: {
     apiKey: {
